@@ -124,21 +124,41 @@ def log_devices(request):
     print("Inserting device", request.params)
     print(datetime.now()) 
 
-    if request.params.has_key('gn') and request.params.has_key('mac') and  request.params.has_key('rssi'):
+    if request.params.has_key('gn') and request.params.has_key('mac') and request.params.has_key('rssi'):
         gn = request.params['gn']
         mac = request.params['mac']
         rssi = request.params['rssi']
         
+        long, lang, color = None, None, None
+        if request.params.has_key('long'):
+            long = request.params['long']
+
+        if request.params.has_key('lang'):
+            lang = request.params['lang']
+
+        if request.params.has_key('color'):
+            color = request.params['color']
+
         print("groupname:",gn)
         print("mac:",mac)
         print("rssi:",rssi)
+        print("long:", long)
+        print("lang:", lang)
+        
+        locationStr = ''
+        if long and lang:
+            locationStr = f", `long` = {long}, `lang` = {lang}"
 
+        colorStr = ''
+        if color:
+            colorStr = f", color = '{color}'"
+            
         query = f"""
 UPDATE devices 
-SET lastseen_ts = '{datetime.now()}', last_rssi = '{rssi}'
+SET lastseen_ts = '{datetime.now()}', last_rssi = '{rssi}'{locationStr}{colorStr}
 WHERE groupname = '{gn}' AND mac = '{mac}';
         """
-        # print(query)
+        print(query)
     else:
         query = "SELECT * FROM devices;"
 
