@@ -1,0 +1,13 @@
+[Unit]
+Description=CSE191 ioTeam API SERVICE
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/common/api/
+ExecStart=python3 api.py >> log-api.log
+Restart=always
+User=ialerner
+
+[Install]
+WantedBy=multi-user.target

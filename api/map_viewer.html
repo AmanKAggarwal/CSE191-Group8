@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>CSE191 Map Viewer</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script>
+
+      // init charts
+    google.charts.load('current', {'packages':['gauge']});
+//      google.charts.setOnLoadCallback(drawGauges);
+
+
+    function initMap() {
+        
+      var ourClass = "null";
+
+      var infowindow = new google.maps.InfoWindow({
+        content: ourClass,
+        maxWidth: 300
+      });
+
+      var ourClassLoc = {lat: 32.881928, lng: -117.233652};
+
+      var map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: ourClassLoc,
+        title: 'UCSD CSE191'
+      });
+
+      var ourClassMarker = new google.maps.Marker({
+        position: ourClassLoc,
+        map: map,
+        title: 'Room 2204'
+      });
+            
+      // zoom if clicked example
+      ourClassMarker.addListener('click', function() {
+        map.setZoom(18);
+        map.setCenter(ourClassMarker.getPosition());
+      });
+      
+      // display info on mouseover
+      ourClassMarker.addListener('mouseover', function() {
+        // do a popup with current info
+        infowindow.open(map, ourClassMarker);
+        updateDevInfo();
+      });
+      
+      // hide info if move moved away
+      ourClassMarker.addListener('mouseout', function() {
+        // remove popup 
+        infowindow.close();
+      });
+      
+      function updateDevInfo() {
+
+        URL = "http://cse191.ucsd.edu/api00/deviceinfo";
+        jdata = {"dev_mac":"CC:50:E3:AF:E4:88"};
+
+        fetch(URL, {
+          method: 'POST',
+          headers: new Headers({
+            'Content-Type': 'application/json'
+          }),
+          body: JSON.stringify(jdata)
+        })
+        .then(resp => resp.json())
+        .then(json => {
+          console.log("Device Info:",json);
+          group_name = json.devices[0]["groupname"]
+          mac = json.devices[0]["mac"]
+          rssi = json.devices[0]["last_rssi"]
+          ourClass = '<center>'+group_name+'</center>';
+                  ourClass += '<table>';
+                  ourClass += '<tr><td>'+mac+'</td></tr>';
+                  ourClass += '<tr><td>'+rssi+'dBm</td></tr>';
+                  ourClass += '</table>';
+                  infowindow.setContent(ourClass);
+        })
+        .catch( error => console.log(error));
+      }
+
+
+    }
+      
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC-NISddpd9JKY5IjHi2kFOo7AzCI3WSYg&callback=initMap">
+    </script>
+  </body>
+</html>
+

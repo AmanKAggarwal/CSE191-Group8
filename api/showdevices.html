@@ -1,0 +1,85 @@
+
+<html>
+
+<head>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<title>CSE 191</title>
+
+</head>
+
+<body>
+
+	<body bgcolor=WHITE>
+	<center>
+		<h1>CSE191 Devices Table</h1>
+	</center>
+	<hr>
+	<table id="devTbl" style="border: 1px; padding: auto; width: 100%;">
+	</table>
+
+</body>
+
+<script type="text/javascript">
+
+
+// set up to update every 5 seconds
+let refreshTimer;
+refreshTimer = setInterval(update_devices , 5000); // call machine with no next button
+
+// update now
+update_devices();
+
+// --------------------------------------------------------
+function update_dev_table(jdata) {
+	let tbl = document.getElementById("devTbl");
+
+	// clear the table
+	tbl.innerHTML = "<tr style='text-align:left'><th>Group</th><th>MAC</th><th>RSSI</th><th>Lastseen</th><th>Location</th></tr>";
+
+	// fill the table with data
+	jdata.devices.forEach(dev => {
+		// convert time
+		var options = { timeZone: "America/Los_Angeles", 
+				hour12: false,
+				year: 'numeric',
+				month: 'numeric',
+				day: 'numeric',
+				hour: 'numeric',
+				minute: 'numeric'
+			};
+		let dt = new Date(dev.lastseen_ts);
+		let ts = dt.toISOString('en-US', options).replace("T"," ").split(".")[0];
+
+		// insert row
+		let row = tbl.insertRow(-1);
+		row.insertCell(-1).innerHTML = dev.groupname;;
+		row.insertCell(-1).innerHTML = dev.mac.toLowerCase();
+		row.insertCell(-1).innerHTML = dev.last_rssi;
+		row.insertCell(-1).innerHTML = ts;
+		row.insertCell(-1).innerHTML = dev.location;
+
+	});
+}
+
+
+function update_devices() {
+
+	URL = "http://cse191.ucsd.edu/api00/listdevices"
+	fetch(URL, {
+		method: 'get',
+		headers: new Headers({
+			'Content-Type': 'application/json'
+		})
+	})
+	.then(resp => resp.json())
+	.then(json => {
+		console.log("Device List:",json);
+		update_dev_table(json);
+	})
+	.catch( error => console.log(error));
+}
+
+</script>
+</html>
