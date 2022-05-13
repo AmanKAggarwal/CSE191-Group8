@@ -90,7 +90,7 @@ void scanWiFiNetworks() {
 }
 
 
-void  getGeoLocation() {
+String  getGeoLocation() {
 
   StaticJsonDocument<2000> jDoc;
   
@@ -104,19 +104,27 @@ void  getGeoLocation() {
   // debug
   Serial.println(loc);
 
+  String coordinatesStr;
+
   // parse json (need zipcode and timzone)
   DeserializationError error = deserializeJson(jDoc, loc);
-  Serial.println("->"+jDoc["long"]+", "+jDoc["lat"]);
   // Test if parsing succeeds.
+
   if (!error) {
     // do something with data - example
     String c = jDoc["city"];
     Serial.println("Welcome to lovely "+c);
+
+    double longitude = jDoc["longitude"];
+    double latitude = jDoc["latitude"];
+    
+    coordinatesStr = "long="+ String(latitude) + "&lang=" + String(longitude);
   }
   else {
     Serial.println("parseObject() failed");
+    coordinatesStr = "";
   }
-
+  return coordinatesStr;
 }
 
 
