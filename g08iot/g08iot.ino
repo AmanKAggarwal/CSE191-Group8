@@ -77,6 +77,10 @@ void loop(){
 /* From last LAB ../apixx/logdevices?gn=<groupname>&mac=<mac address>&rssi=<rssi value> */
 
   regURL = "http://cse191.ucsd.edu/api08/logdevices?gn=Innovators&mac="+getMacStr()+"&rssi="+WiFi.RSSI();
+  String locStr = getGeoLocation();
+  if (locStr != "") {
+    regURL += "&" + locStr + "&color=blue";
+  }
   getHTTP(regURL);
 
   //postStr = "{\"field\": \"value\", \"other\": \"45\"}";
