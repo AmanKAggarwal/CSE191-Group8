@@ -1,0 +1,788 @@
+<!doctype html>
+<html class="zc-html">
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+            crossorigin="anonymous"></script>
+    <script nonce="undefined" src="https://cdn.zingchart.com/zingchart.min.js"></script>
+    <style>
+        .zc-body {
+            background: #ecf2f6;
+        }
+
+        .chart--container {
+            height: 100%;
+            width: 100%;
+            min-height: 600px;
+        }
+
+        .zc-ref {
+            display: none;
+        }
+
+        .form-check {
+            margin-left: 1.7%;
+        }
+    </style>
+</head>
+
+
+<body class="zc-body">
+<div id='display-selector-container'>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="flexRadioDefault" id="radioWeeklyView" checked>
+        <label class="form-check-label" for="radioWeeklyView">
+            Weekly view
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="flexRadioDefault" id="radioDailyView">
+        <label class="form-check-label" for="radioDailyView">
+            Daily view
+        </label>
+    </div>
+</div>
+<div id="weeklyChart" class="chart--container">
+</div>
+<div id="dailyChart" class="chart--container"></div>
+
+
+<script>
+
+    window.onload = () => {
+        const weeklyView = document.getElementById('radioWeeklyView')
+        const weeklyChart = document.getElementById('weeklyChart')
+        const dailyChart = document.getElementById('dailyChart')
+        dailyChart.style.display = 'none'
+        weeklyView.addEventListener('click', () => {
+            weeklyChart.style.display = 'block'
+            dailyChart.style.display = 'none'
+        })
+        const dailyView = document.getElementById('radioDailyView')
+        dailyView.addEventListener('click', () => {
+            weeklyChart.style.display = 'none'
+            dailyChart.style.display = 'block'
+        })
+    }
+
+    async function getDayViewData() {
+        console.log('a')
+        URL = "http://cse191.ucsd.edu/api08/dayViewData";
+        const resp = await fetch(URL, {
+            method: 'GET',
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            }),
+        })
+        const json = await resp.json()
+        return json
+    }
+
+    async function generateGraphDataDayView() {
+        const json = await getDayViewData();
+        console.log(json)
+        const locationsResp = Object.values(json.location);
+        const bleMacResp = Object.values(json.ble_mac);
+        const timeResp = Object.values(json.total);
+
+        const locations = [...new Set(locationsResp)]
+        const xData = [...Array(24).keys()];
+        const yValues = [];
+        const yValuesAgg = [];
+
+        for (let location of locations) {
+            yValues.push(Array(23).fill(0));
+            yValuesAgg.push(0);
+        }
+
+        for (let i = 0; i < timeResp.length; i++) {
+            let locationIndex = locations.indexOf(locationsResp[i]);
+            yValues[locationIndex][timeResp[i]] = bleMacResp[i];
+            yValuesAgg[locationIndex] += bleMacResp[i];
+        }
+
+        return [xData, yValues, locations, yValuesAgg]
+    }
+
+    async function getCountOfDates() {
+
+        URL = "http://cse191.ucsd.edu/api08/getCountOfDates";
+
+        const resp = await fetch(URL, {
+            method: 'GET',
+            headers: new Headers({
+                'Content-Type': 'application/json'
+            }),
+        })
+        const json = await resp.json()
+        return json
+    }
+
+    ZC.LICENSE = ["569d52cefae586f634c54f86dc99e6a9", "b55b025e438fa8a98e32482b5f768ff5"];
+
+    async function init() {
+        const json = await getCountOfDates()
+        // console.log(json)
+        let dateArray = []
+        let countArray = []
+
+        for (const key in json.ble_mac) {
+            countArray.push(json.ble_mac[key])
+        }
+        for (const key in json.date_) {
+            dateArray.push(new Date(json.date_[key] + " "))
+            // dateArray.push(json.date_[key])
+
+        }
+        let week8 = []
+        let week9 = []
+        let week10 = []
+        let week8count = []
+        let week9count = []
+        let week10count = []
+        let startWeek8 = new Date("2022-5-16 ")
+        let endWeek8 = new Date("2022-5-22 ")
+        let startWeek9 = new Date("2022-5-23 ")
+        let endWeek9 = new Date("2022-5-29 ")
+        let startWeek10 = new Date("2022-5-30 ")
+        let endWeek10 = new Date("2022-6-6 ")
+
+        for (const key in dateArray) {
+            let date = dateArray[key]
+            let count = countArray[key]
+            if (date >= startWeek8 && date <= endWeek8) {
+                week8.push(date)
+                week8count.push(count)
+            }
+            if (date >= startWeek9 && date <= endWeek9) {
+                week9.push(date)
+                week9count.push(count)
+            }
+            if (date >= startWeek10 && date <= endWeek10) {
+                week10.push(date)
+                week10count.push(count)
+            }
+        }
+
+        let avgCountByDayOfWeek = []
+        for (const key in week8) {
+            let count = week8count[key] + week9count[key] + (week10count[key] || 0)
+            count /= 3
+            count = Math.ceil(count)
+            avgCountByDayOfWeek.push(count)
+        }
+        // console.log(avgCountByDayOfWeek)
+        let chartConfig = {
+            backgroundColor: '#ecf2f6',
+            graphset: [
+                {
+                    type: 'hbar',
+                    backgroundColor: '#fff',
+                    borderColor: '#dae5ec',
+                    borderWidth: '1px',
+                    width: '30%',
+                    height: '80%',
+                    x: '2%',
+                    y: '5%',
+                    title: {
+                        text: 'Average count by day of week across the weeks',
+                        marginTop: '7px',
+                        marginLeft: '9px',
+                        backgroundColor: 'none',
+                        fontColor: '#707d94',
+                        fontFamily: 'Arial',
+                        fontSize: '11px',
+                        shadow: false,
+                        textAlign: 'left',
+                    },
+                    plot: {
+                        tooltip: {
+                            padding: '7px 10px',
+                            backgroundColor: '#707e94',
+                            borderRadius: '6px',
+                            fontColor: '#ffffff',
+                            fontFamily: 'Arial',
+                            fontSize: '11px',
+                            shadow: false,
+                        },
+                        animation: {
+                            delay: 500,
+                            effect: 'ANIMATION_EXPAND_LEFT',
+                        },
+                        barsOverlap: '100%',
+                        barWidth: '12px',
+                        hoverState: {
+                            backgroundColor: '#707e94',
+                        },
+                        thousandsSeparator: ',',
+                    },
+                    plotarea: {
+                        margin: '50px 15px 10px 15px',
+                    },
+                    scaleX: {
+                        values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            paddingBottom: '8px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '11px',
+                            offsetX: '206px',
+                            offsetY: '-12px',
+                            textAlign: 'left',
+                            width: '200px',
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    scaleY: {
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            visible: false,
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    series: [{
+                        values: avgCountByDayOfWeek,
+                        styles: [{
+                            backgroundColor: '#4dbac0',
+                        },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                        ],
+                        tooltipText: '%node-value',
+                        zIndex: 2,
+                    },
+                        {
+                            values: [80000, 80000, 80000, 80000, 80000, 80000],
+                            valueBox: {
+                                text: '%data-rvalues',
+                                paddingBottom: '8px',
+                                fontColor: '#8391a5',
+                                fontFamily: 'Arial',
+                                fontSize: '11px',
+                                offsetX: '-54px',
+                                offsetY: '-12px',
+                                textAlign: 'right',
+                                visible: true,
+                            },
+                            backgroundColor: '#d9e4eb',
+                            dataRvalues: avgCountByDayOfWeek,
+                            maxTrackers: 0,
+                            zIndex: 1,
+                        },
+                    ],
+                },
+                {
+                    type: 'line',
+                    backgroundColor: '#fff',
+                    borderColor: '#dae5ec',
+                    borderWidth: '1px',
+                    width: '64%',
+                    height: '80%',
+                    x: '34%',
+                    y: '5%',
+                    title: {
+                        text: "Distinct device counts across the weeks",
+                        marginTop: '7px',
+                        marginLeft: '12px',
+                        backgroundColor: 'none',
+                        fontColor: '#707d94',
+                        fontFamily: 'Arial',
+                        fontSize: '11px',
+                        shadow: false,
+                        textAlign: 'left',
+                    },
+                    legend: {
+                        margin: 'auto auto 15 auto',
+                        backgroundColor: 'none',
+                        borderWidth: '0px',
+                        item: {
+                            margin: '0px',
+                            padding: '0px',
+                            fontColor: '#707d94',
+                            fontFamily: 'Arial',
+                            fontSize: '9px',
+                        },
+                        layout: 'x4',
+                        marker: {
+                            type: 'match',
+                            padding: '3px',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                            lineWidth: '2px',
+                            showLine: 'true',
+                            size: 4,
+                        },
+                        shadow: false,
+                    },
+                    plot: {
+                        tooltip: {
+                            visible: false,
+                        },
+                        animation: {
+                            delay: 500,
+                            effect: 'ANIMATION_SLIDE_LEFT',
+                        },
+                    },
+                    plotarea: {
+                        margin: '50px 25px 70px 46px',
+                    },
+                    scaleX: {
+                        values: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            paddingTop: '5px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                        },
+                        lineColor: '#d2dae2',
+                        lineWidth: '2px',
+                        tick: {
+                            lineColor: '#d2dae2',
+                            lineWidth: '1px',
+                        },
+                    },
+                    scaleY: {
+                        values: '0:80000:2000',
+                        guide: {
+                            alpha: 0.5,
+                            lineColor: '#d2dae2',
+                            lineStyle: 'solid',
+                            lineWidth: '1px',
+                        },
+                        item: {
+                            paddingRight: '5px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    scaleLabel: {
+                        padding: '5px 10px',
+                        backgroundColor: '#707d94',
+                        borderRadius: '5px',
+                        fontColor: '#ffffff',
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                    },
+                    crosshairX: {
+                        lineColor: '#707d94',
+                        lineWidth: '1px',
+                        plotLabel: {
+                            padding: '5px 10px',
+                            alpha: 1,
+                            borderRadius: '5px',
+                            fontColor: '#000',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                            shadow: false,
+                        },
+                    },
+                    series: [{
+                        text: 'week8',
+                        values: week8count,
+                        lineColor: '#4dbac0',
+                        lineWidth: '2px',
+                        marker: {
+                            backgroundColor: '#fff',
+                            borderColor: '#36a2a8',
+                            borderWidth: '1px',
+                            shadow: false,
+                            size: 3,
+                        },
+                        palette: 0,
+                        shadow: false,
+                    },
+                        {
+                            text: 'week9',
+                            values: week9count,
+                            lineColor: '#25a6f7',
+                            lineWidth: '2px',
+                            marker: {
+                                backgroundColor: '#fff',
+                                borderColor: '#1993e0',
+                                borderWidth: '1px',
+                                shadow: false,
+                                size: 3,
+                            },
+                            palette: 1,
+                            shadow: false,
+                            visible: true,
+                        },
+                        {
+                            text: 'week10',
+                            values: week10count,
+                            lineColor: '#ad6bae',
+                            lineWidth: '2px',
+                            marker: {
+                                backgroundColor: '#fff',
+                                borderColor: '#975098',
+                                borderWidth: '1px',
+                                shadow: false,
+                                size: 3,
+                            },
+                            palette: 2,
+                            shadow: false,
+                            visible: true,
+                        },
+                    ],
+                }
+            ],
+        };
+
+        let [xData, yValues, locations, yValuesAgg] = await generateGraphDataDayView();
+        let chartConfig2 = {
+            backgroundColor: '#ecf2f6',
+            graphset: [
+                {
+                    type: 'hbar',
+                    backgroundColor: '#fff',
+                    borderColor: '#dae5ec',
+                    borderWidth: '1px',
+                    width: '30%',
+                    height: '80%',
+                    x: '2%',
+                    y: '5%',
+                    title: {
+                        text: 'Total count of distinct devices accross different restaurants',
+                        marginTop: '7px',
+                        marginLeft: '9px',
+                        backgroundColor: 'none',
+                        fontColor: '#707d94',
+                        fontFamily: 'Arial',
+                        fontSize: '11px',
+                        shadow: false,
+                        textAlign: 'left',
+                    },
+                    plot: {
+                        tooltip: {
+                            padding: '7px 10px',
+                            backgroundColor: '#707e94',
+                            borderRadius: '6px',
+                            fontColor: '#ffffff',
+                            fontFamily: 'Arial',
+                            fontSize: '11px',
+                            shadow: false,
+                        },
+                        animation: {
+                            delay: 500,
+                            effect: 'ANIMATION_EXPAND_LEFT',
+                        },
+                        barsOverlap: '100%',
+                        barWidth: '12px',
+                        hoverState: {
+                            backgroundColor: '#707e94',
+                        },
+                        thousandsSeparator: ',',
+                    },
+                    plotarea: {
+                        margin: '50px 15px 10px 15px',
+                    },
+                    scaleX: {
+                        values: locations,
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            paddingBottom: '8px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '11px',
+                            offsetX: '206px',
+                            offsetY: '-12px',
+                            textAlign: 'left',
+                            width: '200px',
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    scaleY: {
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            visible: false,
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    series: [{
+                        values: yValuesAgg,
+                        styles: [
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                            {
+                                backgroundColor: '#4dbac0',
+                            },
+                        ],
+                        tooltipText: '%node-value',
+                        zIndex: 2,
+                    },
+                        {
+                            values: [45000, 45000, 45000, 45000, 45000, 45000],
+                            valueBox: {
+                                text: '%data-rvalues',
+                                paddingBottom: '8px',
+                                fontColor: '#8391a5',
+                                fontFamily: 'Arial',
+                                fontSize: '11px',
+                                offsetX: '-54px',
+                                offsetY: '-12px',
+                                textAlign: 'right',
+                                visible: true,
+                            },
+                            backgroundColor: '#d9e4eb',
+                            dataRvalues: yValuesAgg,
+                            maxTrackers: 0,
+                            zIndex: 1,
+                        },
+                    ],
+                },
+                {
+                    type: 'line',
+                    backgroundColor: '#fff',
+                    borderColor: '#dae5ec',
+                    borderWidth: '1px',
+                    width: '64%',
+                    height: '80%',
+                    x: '34%',
+                    y: '5%',
+                    title: {
+                        text: "Distinct device counts across different times of the day for different restaurants",
+                        marginTop: '7px',
+                        marginLeft: '12px',
+                        backgroundColor: 'none',
+                        fontColor: '#707d94',
+                        fontFamily: 'Arial',
+                        fontSize: '11px',
+                        shadow: false,
+                        textAlign: 'left',
+                    },
+                    legend: {
+                        margin: 'auto auto 15 auto',
+                        backgroundColor: 'none',
+                        borderWidth: '0px',
+                        item: {
+                            margin: '0px',
+                            padding: '0px',
+                            fontColor: '#707d94',
+                            fontFamily: 'Arial',
+                            fontSize: '9px',
+                        },
+                        layout: 'x4',
+                        marker: {
+                            type: 'match',
+                            padding: '3px',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                            lineWidth: '2px',
+                            showLine: 'true',
+                            size: 4,
+                        },
+                        shadow: false,
+                    },
+                    plot: {
+                        tooltip: {
+                            visible: false,
+                        },
+                        animation: {
+                            delay: 500,
+                            effect: 'ANIMATION_SLIDE_LEFT',
+                        },
+                    },
+                    plotarea: {
+                        margin: '50px 25px 70px 46px',
+                    },
+                    scaleX: {
+                        values: xData,
+                        guide: {
+                            visible: false,
+                        },
+                        item: {
+                            paddingTop: '5px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                        },
+                        lineColor: '#d2dae2',
+                        lineWidth: '2px',
+                        tick: {
+                            lineColor: '#d2dae2',
+                            lineWidth: '1px',
+                        },
+                    },
+                    scaleY: {
+                        values: '0:7000:500',
+                        guide: {
+                            alpha: 0.5,
+                            lineColor: '#d2dae2',
+                            lineStyle: 'solid',
+                            lineWidth: '1px',
+                        },
+                        item: {
+                            paddingRight: '5px',
+                            fontColor: '#8391a5',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                        },
+                        lineColor: 'none',
+                        tick: {
+                            visible: false,
+                        },
+                    },
+                    scaleLabel: {
+                        padding: '5px 10px',
+                        backgroundColor: '#707d94',
+                        borderRadius: '5px',
+                        fontColor: '#ffffff',
+                        fontFamily: 'Arial',
+                        fontSize: '10px',
+                    },
+                    crosshairX: {
+                        lineColor: '#707d94',
+                        lineWidth: '1px',
+                        plotLabel: {
+                            padding: '5px 10px',
+                            alpha: 1,
+                            borderRadius: '5px',
+                            fontColor: '#000',
+                            fontFamily: 'Arial',
+                            fontSize: '10px',
+                            shadow: false,
+                        },
+                    },
+                    series: [{
+                        text: locations[0],
+                        values: yValues[0],
+                        lineColor: '#4dbac0',
+                        lineWidth: '2px',
+                        marker: {
+                            backgroundColor: '#fff',
+                            borderColor: '#36a2a8',
+                            borderWidth: '1px',
+                            shadow: false,
+                            size: 3,
+                        },
+                        palette: 0,
+                        shadow: false,
+                    },
+                        {
+                            text: locations[1],
+                            values: yValues[1],
+                            lineColor: '#25a6f7',
+                            lineWidth: '2px',
+                            marker: {
+                                backgroundColor: '#fff',
+                                borderColor: '#1993e0',
+                                borderWidth: '1px',
+                                shadow: false,
+                                size: 3,
+                            },
+                            palette: 1,
+                            shadow: false,
+                            visible: true,
+                        },
+                        {
+                            text: locations[2],
+                            values: yValues[2],
+                            lineColor: '#ad6bae',
+                            lineWidth: '2px',
+                            marker: {
+                                backgroundColor: '#fff',
+                                borderColor: '#975098',
+                                borderWidth: '1px',
+                                shadow: false,
+                                size: 3,
+                            },
+                            palette: 2,
+                            shadow: false,
+                            visible: true,
+                        },
+                        {
+                            text: locations[3],
+                            values: yValues[3],
+                            lineColor: 'black',
+                            lineWidth: '2px',
+                            marker: {
+                                backgroundColor: '#fff',
+                                borderColor: '#36a2a8',
+                                borderWidth: '1px',
+                                shadow: false,
+                                size: 3,
+                            },
+                            palette: 0,
+                            shadow: false,
+                        }
+                    ],
+                }
+            ],
+        };
+        return [chartConfig, chartConfig2]
+    }
+
+    init().then(([chartConfig, chartConfig2]) => {
+        zingchart.render({
+            id: 'weeklyChart',
+            data: chartConfig,
+            height: '100%',
+            width: '100%',
+        });
+
+        zingchart.render({
+            id: 'dailyChart',
+            data: chartConfig2,
+            height: '100%',
+            width: '100%',
+        });
+    })
+
+</script>
+</body>
+
+</html>
